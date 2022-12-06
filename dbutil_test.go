@@ -2,10 +2,11 @@ package dbutil_test
 
 import (
 	"database/sql"
-	"dbutil"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/minetest-go/dbutil"
 
 	"github.com/stretchr/testify/assert"
 	_ "modernc.org/sqlite"

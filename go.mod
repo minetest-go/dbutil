@@ -1,4 +1,4 @@
-module dbutil
+module github.com/minetest-go/dbutil
 
 go 1.18
 
