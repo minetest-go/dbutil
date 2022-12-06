@@ -53,8 +53,8 @@ list, err := dbutil.SelectMulti(db, func() *MyTable { return &MyTable{} }, "wher
 // count
 count, err := dbutil.Count(db, &MyTable{}, "where true=true")
 
-// update (where f2 = 2)
-err := dbutil.Update(db, &MyTable{F1: 3}, map[string]any{"f1": 2})
+// update (where f1 = 2)
+err := dbutil.Update(db, tbl, "where f1 = $1", 2)
 
 // delete
 err := dbutil.Delete(db, &MyTable{}, "where f1 = $1", 3)

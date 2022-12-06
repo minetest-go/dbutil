@@ -92,7 +92,7 @@ func Test(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, tbl)
 	tbl.F1 = 3
-	err = dbutil.Update(db, tbl, map[string]any{"f1": 2})
+	err = dbutil.Update(db, tbl, "where f1 = $1", 2)
 	assert.NoError(t, err)
 
 	// count specific
