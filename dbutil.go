@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func Insert(d *sql.DB, entity Insertable, additionalStmts ...string) error {
+func Insert(d DBTx, entity Insertable, additionalStmts ...string) error {
 	cols := entity.Columns(InsertAction)
 	placeholders := make([]string, len(cols))
 	for i := range cols {
@@ -22,7 +22,7 @@ func Insert(d *sql.DB, entity Insertable, additionalStmts ...string) error {
 	return err
 }
 
-func InsertReturning(d *sql.DB, entity Insertable, retField string, retValue any) error {
+func InsertReturning(d DBTx, entity Insertable, retField string, retValue any) error {
 	cols := entity.Columns(InsertAction)
 	placeholders := make([]string, len(cols))
 	for i := range cols {
@@ -43,7 +43,7 @@ func InsertReturning(d *sql.DB, entity Insertable, retField string, retValue any
 	return err
 }
 
-func Update(d *sql.DB, entity Insertable, constraints string, params ...any) error {
+func Update(d DBTx, entity Insertable, constraints string, params ...any) error {
 	cols := entity.Columns(UpdateAction)
 	updates := make([]string, len(cols))
 	values := entity.Values(UpdateAction)
@@ -65,7 +65,7 @@ func Update(d *sql.DB, entity Insertable, constraints string, params ...any) err
 	return err
 }
 
-func Select[E Selectable](d *sql.DB, entity E, constraints string, params ...any) (E, error) {
+func Select[E Selectable](d DBTx, entity E, constraints string, params ...any) (E, error) {
 	row := d.QueryRow(fmt.Sprintf(
 		"select %s from %s %s",
 		strings.Join(entity.Columns(SelectAction), ","), entity.Table(), constraints),
@@ -75,13 +75,13 @@ func Select[E Selectable](d *sql.DB, entity E, constraints string, params ...any
 	return entity, err
 }
 
-func Count[E Selectable](d *sql.DB, entity E, constraints string, params ...any) (int, error) {
+func Count[E Selectable](d DBTx, entity E, constraints string, params ...any) (int, error) {
 	row := d.QueryRow(fmt.Sprintf("select count(*) from %s %s", entity.Table(), constraints), params...)
 	var count int
 	return count, row.Scan(&count)
 }
 
-func Delete[E Selectable](d *sql.DB, entity E, constraints string, params ...any) error {
+func Delete[E Selectable](d DBTx, entity E, constraints string, params ...any) error {
 	_, err := d.Exec(
 		fmt.Sprintf("delete from %s %s", entity.Table(), constraints),
 		params...,
@@ -89,7 +89,7 @@ func Delete[E Selectable](d *sql.DB, entity E, constraints string, params ...any
 	return err
 }
 
-func SelectMulti[E Selectable](d *sql.DB, p func() E, constraints string, params ...any) ([]E, error) {
+func SelectMulti[E Selectable](d DBTx, p func() E, constraints string, params ...any) ([]E, error) {
 	entity := p()
 	rows, err := d.Query(fmt.Sprintf("select %s from %s %s", strings.Join(entity.Columns(SelectAction), ","), entity.Table(), constraints), params...)
 	if err != nil && err != sql.ErrNoRows {

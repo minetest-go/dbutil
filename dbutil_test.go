@@ -17,6 +17,7 @@ func setupDB(t *testing.T) *sql.DB {
 	assert.NoError(t, err)
 	db_, err := sql.Open("sqlite", path.Join(tmpdir, "dbutil.sqlite"))
 	assert.NoError(t, err)
+	db_.SetMaxOpenConns(1)
 
 	_, err = db_.Exec(`
 		create table mytable(
@@ -86,6 +87,14 @@ func Test(t *testing.T) {
 	count, err := dbutil.Count(db, &MyTable{}, "where true=true")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, count)
+
+	// count all (in tx)
+	tx, err := db.Begin()
+	assert.NoError(t, err)
+	count, err = dbutil.Count(tx, &MyTable{}, "where true=true")
+	assert.NoError(t, err)
+	assert.Equal(t, 2, count)
+	assert.NoError(t, tx.Commit())
 
 	// update (where f2 = 2)
 	tbl, err := dbutil.Select(db, &MyTable{}, "where f1 = $1", 2)

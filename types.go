@@ -1,10 +1,19 @@
 package dbutil
 
+import "database/sql"
+
 const (
 	InsertAction = "insert"
 	UpdateAction = "update"
 	SelectAction = "select"
 )
+
+type DBTx interface {
+	Exec(query string, args ...any) (sql.Result, error)
+	Prepare(query string) (*sql.Stmt, error)
+	QueryRow(query string, args ...any) *sql.Row
+	Query(query string, args ...any) (*sql.Rows, error)
+}
 
 type Entity interface {
 	Columns(action string) []string
