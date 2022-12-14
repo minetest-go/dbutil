@@ -62,10 +62,13 @@ func Test(t *testing.T) {
 	// insert
 	assert.NoError(t, dbutil.Insert(db, &MyTable{F1: 1}))
 
-	// inser with return value (sqlite specific: "INSERT RETURNING")
+	// insert with return value (sqlite specific: "INSERT RETURNING")
 	var retVal int64 = -1
 	assert.NoError(t, dbutil.InsertReturning(db, &MyTable{F1: 2}, "pk", &retVal))
 	assert.True(t, retVal >= 0)
+
+	// insert or replace (sqlite flavor)
+	assert.NoError(t, dbutil.InsertOrReplace(db, &MyTable{F1: 2, PK: &retVal}))
 
 	// select single
 	res, err := dbutil.Select(db, &MyTable{}, "where f1 = $1", 1)
