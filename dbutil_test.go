@@ -134,6 +134,11 @@ func Test(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(list))
 
+	// select multi (no results)
+	list, err = dbu.SelectMulti("where f1 = %s", -1)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(list))
+
 	// count all
 	count, err := dbu.Count("where true=true")
 	assert.NoError(t, err)
