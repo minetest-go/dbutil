@@ -58,66 +58,70 @@ func (t *MyTable) Values(action string) []any {
 func Test(t *testing.T) {
 	// setup
 	db := setupDB(t)
+	provider := func() *MyTable { return &MyTable{} }
+	dbu := dbutil.New(db, dbutil.DialectSQLite, provider)
 
 	// insert
-	assert.NoError(t, dbutil.Insert(db, &MyTable{F1: 1}))
+	assert.NoError(t, dbu.Insert(&MyTable{F1: 1}))
 
 	// insert with return value (sqlite specific: "INSERT RETURNING")
 	var retVal int64 = -1
-	assert.NoError(t, dbutil.InsertReturning(db, &MyTable{F1: 2}, "pk", &retVal))
+	assert.NoError(t, dbu.InsertReturning(&MyTable{F1: 2}, "pk", &retVal))
 	assert.True(t, retVal >= 0)
 
 	// insert or replace (sqlite flavor)
-	assert.NoError(t, dbutil.InsertOrReplace(db, &MyTable{F1: 2, PK: &retVal}))
+	assert.NoError(t, dbu.InsertOrReplace(&MyTable{F1: 2, PK: &retVal}))
 
 	// select single
-	res, err := dbutil.Select(db, &MyTable{}, "where f1 = $1", 1)
+	res, err := dbu.Select("where f1 = $1", 1)
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Equal(t, 1, res.F1)
 
 	// select single non-existent
-	_, err = dbutil.Select(db, &MyTable{}, "where f1 = $1", 0)
+	_, err = dbu.Select("where f1 = $1", 0)
 	assert.Error(t, err)
 	assert.ErrorIs(t, sql.ErrNoRows, err)
 
 	// select multi
-	list, err := dbutil.SelectMulti(db, func() *MyTable { return &MyTable{} }, "where true=true")
+	list, err := dbu.SelectMulti("where true=true")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(list))
 
 	// count all
-	count, err := dbutil.Count(db, &MyTable{}, "where true=true")
+	count, err := dbu.Count("where true=true")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, count)
 
 	// count all (in tx)
 	tx, err := db.Begin()
+	dbutx := dbutil.New(tx, dbutil.DialectSQLite, provider)
+
 	assert.NoError(t, err)
-	count, err = dbutil.Count(tx, &MyTable{}, "where true=true")
+	count, err = dbutx.Count("where true=true")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, count)
 	assert.NoError(t, tx.Commit())
 
 	// update (where f2 = 2)
-	tbl, err := dbutil.Select(db, &MyTable{}, "where f1 = $1", 2)
+	tbl, err := dbu.Select("where f1 = $1", 2)
 	assert.NoError(t, err)
 	assert.NotNil(t, tbl)
 	tbl.F1 = 3
-	err = dbutil.Update(db, tbl, "where f1 = $1", 2)
+	err = dbu.Update(tbl, "where f1 = $1", 2)
 	assert.NoError(t, err)
 
 	// count specific
-	count, err = dbutil.Count(db, &MyTable{}, "where f1 = $1", 3)
+	count, err = dbu.Count("where f1 = $1", 3)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
 
 	// delete
-	err = dbutil.Delete(db, &MyTable{}, "where f1 = $1", 3)
+	err = dbu.Delete("where f1 = $1", 3)
 	assert.NoError(t, err)
 
 	// count specific (after delete)
-	count, err = dbutil.Count(db, &MyTable{}, "where f1 = $1", 3)
+	count, err = dbu.Count("where f1 = $1", 3)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, count)
 
