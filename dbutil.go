@@ -25,3 +25,11 @@ func (dbu *DBUtil[E]) BindParam(i int) string {
 	}
 	return fmt.Sprintf("$%d", i)
 }
+
+func (dbu *DBUtil[E]) FormatBindParams(str string, param_count int) string {
+	params := []any{}
+	for i := 1; i <= param_count; i++ {
+		params = append(params, dbu.BindParam(i))
+	}
+	return fmt.Sprintf(str, params...)
+}

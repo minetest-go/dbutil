@@ -9,6 +9,7 @@ func (dbu *DBUtil[E]) Update(entity Insertable, constraints string, params ...an
 	cols := entity.Columns(UpdateAction)
 	updates := make([]string, len(cols))
 	values := entity.Values(UpdateAction)
+	constraints = dbu.FormatBindParams(constraints, len(params))
 
 	// start params-number after provided params
 	pi := len(params) + 1

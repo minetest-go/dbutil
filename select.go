@@ -10,7 +10,7 @@ func (dbu *DBUtil[E]) Select(constraints string, params ...any) (E, error) {
 	entity := dbu.provider()
 	row := dbu.db.QueryRow(fmt.Sprintf(
 		"select %s from %s %s",
-		strings.Join(entity.Columns(SelectAction), ","), entity.Table(), constraints),
+		strings.Join(entity.Columns(SelectAction), ","), entity.Table(), dbu.FormatBindParams(constraints, len(params))),
 		params...,
 	)
 	err := entity.Scan(SelectAction, row.Scan)
@@ -19,7 +19,9 @@ func (dbu *DBUtil[E]) Select(constraints string, params ...any) (E, error) {
 
 func (dbu *DBUtil[E]) SelectMulti(constraints string, params ...any) ([]E, error) {
 	entity := dbu.provider()
-	rows, err := dbu.db.Query(fmt.Sprintf("select %s from %s %s", strings.Join(entity.Columns(SelectAction), ","), entity.Table(), constraints), params...)
+	rows, err := dbu.db.Query(
+		fmt.Sprintf("select %s from %s %s", strings.Join(entity.Columns(SelectAction), ","),
+			entity.Table(), dbu.FormatBindParams(constraints, len(params))), params...)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
