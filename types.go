@@ -2,6 +2,13 @@ package dbutil
 
 import "database/sql"
 
+type SQLDialect int
+
+const (
+	DialectSQLite SQLDialect = iota
+	DialectPostgres
+)
+
 const (
 	InsertAction = "insert"
 	UpdateAction = "update"

@@ -2,20 +2,21 @@ package dbutil_test
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 	"path"
 	"testing"
 
 	"github.com/minetest-go/dbutil"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
-	_ "modernc.org/sqlite"
 )
 
 func setupDB(t *testing.T) *sql.DB {
 	tmpdir, err := os.MkdirTemp(os.TempDir(), "dbutil")
 	assert.NoError(t, err)
-	db_, err := sql.Open("sqlite", path.Join(tmpdir, "dbutil.sqlite"))
+	db_, err := sql.Open("sqlite3", path.Join(tmpdir, "dbutil.sqlite"))
 	assert.NoError(t, err)
 	db_.SetMaxOpenConns(1)
 
@@ -53,72 +54,136 @@ func (t *MyTable) Values(action string) []any {
 	return []any{t.PK, t.F1}
 }
 
+func ExampleDBUtil() {
+	// setup
+	db, err := sql.Open("sqlite3", "mydb")
+	if err != nil {
+		panic(err)
+	}
+
+	provider := func() *MyTable { return &MyTable{} }
+	dbu := dbutil.New(db, dbutil.DialectSQLite, provider)
+
+	// insert
+	err = dbu.Insert(&MyTable{F1: 1})
+	if err != nil {
+		panic(err)
+	}
+
+	// select single
+	// NOTE: %s is getting replaced by the db-native bind placeholder ($1 for postgres or ?1 for sqlite)
+	res, err := dbu.Select("where f1 = %s", 1)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(res)
+
+	// count all
+	count, err := dbu.Count("where true=true")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(count)
+
+	// update
+	res.F1 = 3
+	err = dbu.Update(res, "where f1 = %s", 2)
+	if err != nil {
+		panic(err)
+	}
+
+	// delete
+	err = dbu.Delete("where f1 = %s", 3)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // testing below here
 
 func Test(t *testing.T) {
 	// setup
 	db := setupDB(t)
+	provider := func() *MyTable { return &MyTable{} }
+	dbu := dbutil.New(db, dbutil.DialectSQLite, provider)
 
 	// insert
-	assert.NoError(t, dbutil.Insert(db, &MyTable{F1: 1}))
+	assert.NoError(t, dbu.Insert(&MyTable{F1: 1}))
 
 	// insert with return value (sqlite specific: "INSERT RETURNING")
 	var retVal int64 = -1
-	assert.NoError(t, dbutil.InsertReturning(db, &MyTable{F1: 2}, "pk", &retVal))
+	assert.NoError(t, dbu.InsertReturning(&MyTable{F1: 2}, "pk", &retVal))
 	assert.True(t, retVal >= 0)
 
 	// insert or replace (sqlite flavor)
-	assert.NoError(t, dbutil.InsertOrReplace(db, &MyTable{F1: 2, PK: &retVal}))
+	assert.NoError(t, dbu.InsertOrReplace(&MyTable{F1: 2, PK: &retVal}))
 
 	// select single
-	res, err := dbutil.Select(db, &MyTable{}, "where f1 = $1", 1)
+	res, err := dbu.Select("where f1 = %s", 1)
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Equal(t, 1, res.F1)
 
 	// select single non-existent
-	_, err = dbutil.Select(db, &MyTable{}, "where f1 = $1", 0)
+	_, err = dbu.Select("where f1 = %s", 0)
 	assert.Error(t, err)
 	assert.ErrorIs(t, sql.ErrNoRows, err)
 
 	// select multi
-	list, err := dbutil.SelectMulti(db, func() *MyTable { return &MyTable{} }, "where true=true")
+	list, err := dbu.SelectMulti("where true=true")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(list))
 
+	// select multi (no results)
+	list, err = dbu.SelectMulti("where f1 = %s", -1)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(list))
+
 	// count all
-	count, err := dbutil.Count(db, &MyTable{}, "where true=true")
+	count, err := dbu.Count("where true=true")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, count)
 
 	// count all (in tx)
 	tx, err := db.Begin()
+	dbutx := dbutil.New(tx, dbutil.DialectSQLite, provider)
+
 	assert.NoError(t, err)
-	count, err = dbutil.Count(tx, &MyTable{}, "where true=true")
+	count, err = dbutx.Count("where true=true")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, count)
 	assert.NoError(t, tx.Commit())
 
 	// update (where f2 = 2)
-	tbl, err := dbutil.Select(db, &MyTable{}, "where f1 = $1", 2)
+	tbl, err := dbu.Select("where f1 = %s", 2)
 	assert.NoError(t, err)
 	assert.NotNil(t, tbl)
 	tbl.F1 = 3
-	err = dbutil.Update(db, tbl, "where f1 = $1", 2)
+	err = dbu.Update(tbl, "where f1 = %s", 2)
 	assert.NoError(t, err)
 
 	// count specific
-	count, err = dbutil.Count(db, &MyTable{}, "where f1 = $1", 3)
+	count, err = dbu.Count("where f1 = %s", 3)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
 
 	// delete
-	err = dbutil.Delete(db, &MyTable{}, "where f1 = $1", 3)
+	err = dbu.Delete("where f1 = %s", 3)
 	assert.NoError(t, err)
 
 	// count specific (after delete)
-	count, err = dbutil.Count(db, &MyTable{}, "where f1 = $1", 3)
+	count, err = dbu.Count("where f1 = %s", 3)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, count)
 
+}
+
+func TestBindParams(t *testing.T) {
+	dbu := dbutil.New[*MyTable](nil, dbutil.DialectSQLite, nil)
+	str := dbu.FormatBindParams("where x = %s and y = %s", 2)
+	assert.Equal(t, "where x = ?1 and y = ?2", str)
+
+	dbu = dbutil.New[*MyTable](nil, dbutil.DialectPostgres, nil)
+	str = dbu.FormatBindParams("where x = %s and y = %s", 2)
+	assert.Equal(t, "where x = $1 and y = $2", str)
 }
