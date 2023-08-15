@@ -8,14 +8,14 @@ import (
 
 	"github.com/minetest-go/dbutil"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
-	_ "modernc.org/sqlite"
 )
 
 func setupDB(t *testing.T) *sql.DB {
 	tmpdir, err := os.MkdirTemp(os.TempDir(), "dbutil")
 	assert.NoError(t, err)
-	db_, err := sql.Open("sqlite", path.Join(tmpdir, "dbutil.sqlite"))
+	db_, err := sql.Open("sqlite3", path.Join(tmpdir, "dbutil.sqlite"))
 	assert.NoError(t, err)
 	db_.SetMaxOpenConns(1)
 
@@ -108,7 +108,7 @@ func Test(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, tbl)
 	tbl.F1 = 3
-	err = dbu.Update(tbl, "where f1 = $1", 2)
+	err = dbu.Update(tbl, "where f1 = ?1", 2)
 	assert.NoError(t, err)
 
 	// count specific

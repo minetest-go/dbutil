@@ -13,16 +13,16 @@ func (dbu *DBUtil[E]) Update(entity Insertable, constraints string, params ...an
 	// start params-number after provided params
 	pi := len(params) + 1
 	for i := range cols {
-		updates[i] = fmt.Sprintf("%s = $%d", cols[i], pi)
+		updates[i] = fmt.Sprintf("%s = ?%d", cols[i], pi)
 		params = append(params, values[i])
 		pi++
 	}
 
-	_, err := dbu.db.Exec(fmt.Sprintf(
+	sql := fmt.Sprintf(
 		"update %s set %s %s",
-		entity.Table(), strings.Join(updates, ","), constraints),
-		params...,
-	)
+		entity.Table(), strings.Join(updates, ","), constraints)
+
+	_, err := dbu.db.Exec(sql, params...)
 
 	return err
 }
