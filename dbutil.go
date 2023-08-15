@@ -1,5 +1,7 @@
 package dbutil
 
+import "fmt"
+
 type EntityProvider[E Selectable] func() E
 
 type DBUtil[E Selectable] struct {
@@ -14,4 +16,12 @@ func New[E Selectable](db DBTx, dialect SQLDialect, provider EntityProvider[E]) 
 		dialect:  dialect,
 		provider: provider,
 	}
+}
+
+func (dbu *DBUtil[E]) BindParam(i int) string {
+	if dbu.dialect == DialectSQLite {
+		// special case for sqlite
+		return fmt.Sprintf("?%d", i)
+	}
+	return fmt.Sprintf("$%d", i)
 }

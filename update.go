@@ -13,7 +13,7 @@ func (dbu *DBUtil[E]) Update(entity Insertable, constraints string, params ...an
 	// start params-number after provided params
 	pi := len(params) + 1
 	for i := range cols {
-		updates[i] = fmt.Sprintf("%s = ?%d", cols[i], pi)
+		updates[i] = fmt.Sprintf("%s = %s", cols[i], dbu.BindParam(pi))
 		params = append(params, values[i])
 		pi++
 	}

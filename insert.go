@@ -9,7 +9,7 @@ func (dbu *DBUtil[E]) Insert(entity Insertable, additionalStmts ...string) error
 	cols := entity.Columns(InsertAction)
 	placeholders := make([]string, len(cols))
 	for i := range cols {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		placeholders[i] = dbu.BindParam(i + 1)
 	}
 
 	_, err := dbu.db.Exec(fmt.Sprintf(
@@ -25,7 +25,7 @@ func (dbu *DBUtil[E]) InsertOrReplace(entity Insertable, additionalStmts ...stri
 	cols := entity.Columns(InsertAction)
 	placeholders := make([]string, len(cols))
 	for i := range cols {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		placeholders[i] = dbu.BindParam(i + 1)
 	}
 
 	_, err := dbu.db.Exec(fmt.Sprintf(
@@ -41,7 +41,7 @@ func (dbu *DBUtil[E]) InsertReturning(entity Insertable, retField string, retVal
 	cols := entity.Columns(InsertAction)
 	placeholders := make([]string, len(cols))
 	for i := range cols {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		placeholders[i] = dbu.BindParam(i + 1)
 	}
 
 	stmt, err := dbu.db.Prepare(fmt.Sprintf(

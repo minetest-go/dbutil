@@ -2,6 +2,7 @@ package dbutil_test
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -53,6 +54,50 @@ func (t *MyTable) Values(action string) []any {
 	return []any{t.PK, t.F1}
 }
 
+func ExampleDBUtil() {
+	// setup
+	db, err := sql.Open("sqlite3", "mydb")
+	if err != nil {
+		panic(err)
+	}
+
+	provider := func() *MyTable { return &MyTable{} }
+	dbu := dbutil.New(db, dbutil.DialectSQLite, provider)
+
+	// insert
+	err = dbu.Insert(&MyTable{F1: 1})
+	if err != nil {
+		panic(err)
+	}
+
+	// select single
+	res, err := dbu.Select(fmt.Sprintf("where f1 = %s", dbu.BindParam(1)), 1)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(res)
+
+	// count all
+	count, err := dbu.Count("where true=true")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(count)
+
+	// update
+	res.F1 = 3
+	err = dbu.Update(res, fmt.Sprintf("where f1 = %s", dbu.BindParam(1)), 2)
+	if err != nil {
+		panic(err)
+	}
+
+	// delete
+	err = dbu.Delete(fmt.Sprintf("where f1 = %s", dbu.BindParam(1)), 3)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // testing below here
 
 func Test(t *testing.T) {
@@ -73,13 +118,13 @@ func Test(t *testing.T) {
 	assert.NoError(t, dbu.InsertOrReplace(&MyTable{F1: 2, PK: &retVal}))
 
 	// select single
-	res, err := dbu.Select("where f1 = $1", 1)
+	res, err := dbu.Select(fmt.Sprintf("where f1 = %s", dbu.BindParam(1)), 1)
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Equal(t, 1, res.F1)
 
 	// select single non-existent
-	_, err = dbu.Select("where f1 = $1", 0)
+	_, err = dbu.Select(fmt.Sprintf("where f1 = %s", dbu.BindParam(1)), 0)
 	assert.Error(t, err)
 	assert.ErrorIs(t, sql.ErrNoRows, err)
 
@@ -104,24 +149,24 @@ func Test(t *testing.T) {
 	assert.NoError(t, tx.Commit())
 
 	// update (where f2 = 2)
-	tbl, err := dbu.Select("where f1 = $1", 2)
+	tbl, err := dbu.Select(fmt.Sprintf("where f1 = %s", dbu.BindParam(1)), 2)
 	assert.NoError(t, err)
 	assert.NotNil(t, tbl)
 	tbl.F1 = 3
-	err = dbu.Update(tbl, "where f1 = ?1", 2)
+	err = dbu.Update(tbl, fmt.Sprintf("where f1 = %s", dbu.BindParam(1)), 2)
 	assert.NoError(t, err)
 
 	// count specific
-	count, err = dbu.Count("where f1 = $1", 3)
+	count, err = dbu.Count(fmt.Sprintf("where f1 = %s", dbu.BindParam(1)), 3)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
 
 	// delete
-	err = dbu.Delete("where f1 = $1", 3)
+	err = dbu.Delete(fmt.Sprintf("where f1 = %s", dbu.BindParam(1)), 3)
 	assert.NoError(t, err)
 
 	// count specific (after delete)
-	count, err = dbu.Count("where f1 = $1", 3)
+	count, err = dbu.Count(fmt.Sprintf("where f1 = %s", dbu.BindParam(1)), 3)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, count)
 
