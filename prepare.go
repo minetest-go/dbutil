@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func (dbu *DBUtil[E]) PrepareInsert(additionalStmts ...string) (func(Insertable) error, error) {
+func (dbu *DBUtil[E]) PrepareInsert(additionalStmts ...string) (func(E) error, error) {
 	entity := dbu.provider()
 	cols := entity.Columns(InsertAction)
 	placeholders := make([]string, len(cols))
@@ -21,7 +21,7 @@ func (dbu *DBUtil[E]) PrepareInsert(additionalStmts ...string) (func(Insertable)
 		return nil, err
 	}
 
-	return func(i Insertable) error {
+	return func(i E) error {
 		_, err := stmt.Exec(i.Values(InsertAction)...)
 		return err
 	}, nil

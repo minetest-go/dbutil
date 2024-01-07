@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func (dbu *DBUtil[E]) Insert(entity Insertable, additionalStmts ...string) error {
+func (dbu *DBUtil[E]) Insert(entity E, additionalStmts ...string) error {
 	cols := entity.Columns(InsertAction)
 	placeholders := make([]string, len(cols))
 	for i := range cols {
@@ -21,7 +21,7 @@ func (dbu *DBUtil[E]) Insert(entity Insertable, additionalStmts ...string) error
 	return err
 }
 
-func (dbu *DBUtil[E]) InsertOrReplace(entity Insertable, additionalStmts ...string) error {
+func (dbu *DBUtil[E]) InsertOrReplace(entity E, additionalStmts ...string) error {
 	cols := entity.Columns(InsertAction)
 	placeholders := make([]string, len(cols))
 	for i := range cols {
@@ -37,7 +37,7 @@ func (dbu *DBUtil[E]) InsertOrReplace(entity Insertable, additionalStmts ...stri
 	return err
 }
 
-func (dbu *DBUtil[E]) InsertReturning(entity Insertable, retField string, retValue any) error {
+func (dbu *DBUtil[E]) InsertReturning(entity E, retField string, retValue any) error {
 	cols := entity.Columns(InsertAction)
 	placeholders := make([]string, len(cols))
 	for i := range cols {

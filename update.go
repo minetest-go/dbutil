@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func (dbu *DBUtil[E]) Update(entity Insertable, constraints string, params ...any) error {
+func (dbu *DBUtil[E]) Update(entity E, constraints string, params ...any) error {
 	cols := entity.Columns(UpdateAction)
 	updates := make([]string, len(cols))
 	values := entity.Values(UpdateAction)

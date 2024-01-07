@@ -2,15 +2,15 @@ package dbutil
 
 import "fmt"
 
-type EntityProvider[E Selectable] func() E
+type EntityProvider[E Entity] func() E
 
-type DBUtil[E Selectable] struct {
+type DBUtil[E Entity] struct {
 	db       DBTx
 	dialect  SQLDialect
 	provider EntityProvider[E]
 }
 
-func New[E Selectable](db DBTx, dialect SQLDialect, provider EntityProvider[E]) *DBUtil[E] {
+func New[E Entity](db DBTx, dialect SQLDialect, provider EntityProvider[E]) *DBUtil[E] {
 	return &DBUtil[E]{
 		db:       db,
 		dialect:  dialect,
