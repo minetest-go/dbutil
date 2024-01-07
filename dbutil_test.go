@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupDB(t *testing.T) *sql.DB {
+func setupDB(t assert.TestingT) *sql.DB {
 	tmpdir, err := os.MkdirTemp(os.TempDir(), "dbutil")
 	assert.NoError(t, err)
 	db_, err := sql.Open("sqlite3", path.Join(tmpdir, "dbutil.sqlite"))
@@ -176,6 +176,18 @@ func Test(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 0, count)
 
+	// prepare insert
+	ps, err := dbu.PrepareInsert()
+	assert.NoError(t, err)
+	assert.NotNil(t, ps)
+	assert.NoError(t, ps(&MyTable{F1: 66}))
+
+	// select prepared insert
+	res, err = dbu.Select("where f1 = %s", 66)
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, 66, res.F1)
+
 }
 
 func TestBindParams(t *testing.T) {
@@ -186,4 +198,80 @@ func TestBindParams(t *testing.T) {
 	dbu = dbutil.New[*MyTable](nil, dbutil.DialectPostgres, nil)
 	str = dbu.FormatBindParams("where x = %s and y = %s", 2)
 	assert.Equal(t, "where x = $1 and y = $2", str)
+}
+
+func BenchmarkInsert(b *testing.B) {
+	// setup
+	db := setupDB(b)
+	provider := func() *MyTable { return &MyTable{} }
+	dbu := dbutil.New(db, dbutil.DialectSQLite, provider)
+
+	// insert
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		assert.NoError(b, dbu.Insert(&MyTable{F1: 1}))
+	}
+}
+
+func BenchmarkInsertTx(b *testing.B) {
+	// setup
+	db := setupDB(b)
+	provider := func() *MyTable { return &MyTable{} }
+	tx, err := db.Begin()
+	assert.NoError(b, err)
+	assert.NotNil(b, tx)
+
+	dbu := dbutil.New(tx, dbutil.DialectSQLite, provider)
+
+	// insert
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		assert.NoError(b, dbu.Insert(&MyTable{F1: 1}))
+	}
+
+	assert.NoError(b, tx.Commit())
+}
+
+func BenchmarkInsertPrepared(b *testing.B) {
+	// setup
+	db := setupDB(b)
+	provider := func() *MyTable { return &MyTable{} }
+	dbu := dbutil.New(db, dbutil.DialectSQLite, provider)
+
+	// prepare insert
+	ps, err := dbu.PrepareInsert()
+	assert.NoError(b, err)
+	assert.NotNil(b, ps)
+	assert.NoError(b, ps(&MyTable{F1: 66}))
+
+	// insert
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		assert.NoError(b, ps(&MyTable{F1: 1}))
+	}
+}
+
+func BenchmarkInsertPreparedTx(b *testing.B) {
+	// setup
+	db := setupDB(b)
+	provider := func() *MyTable { return &MyTable{} }
+	tx, err := db.Begin()
+	assert.NoError(b, err)
+	assert.NotNil(b, tx)
+
+	dbu := dbutil.New(tx, dbutil.DialectSQLite, provider)
+
+	// prepare insert
+	ps, err := dbu.PrepareInsert()
+	assert.NoError(b, err)
+	assert.NotNil(b, ps)
+	assert.NoError(b, ps(&MyTable{F1: 66}))
+
+	// insert
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		assert.NoError(b, ps(&MyTable{F1: 1}))
+	}
+
+	assert.NoError(b, tx.Commit())
 }
